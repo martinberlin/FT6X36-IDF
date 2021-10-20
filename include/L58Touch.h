@@ -64,6 +64,7 @@ public:
 	uint8_t touched();
 	void loop();
 	void processTouch();
+	bool processGesture(TPoint point, unsigned long timeDiff);
 	// Helper functions to make the touch display aware
 	void setRotation(uint8_t rotation);
 	void setTouchWidth(uint16_t width);
@@ -97,8 +98,9 @@ private:
 
 	static L58Touch * _instance;
 	uint8_t _intPin;
-	// Milliseconds between press and release for Tap detection
+	// Milliseconds between press and release for Event detection
 	uint8_t _tap_threshold = 160;
+	uint8_t _swing_threshold = 200;
 	
 	// Make touch rotation aware:
 	uint8_t _rotation = 0;
@@ -112,11 +114,15 @@ private:
 	unsigned long _touchStartTime = 0;
 	unsigned long _touchEndTime = 0;
 	unsigned long _touchLastTapTime = 0;
-	uint16_t lastX = 0;
-	uint16_t lastY = 0;
+
+	
+	// Used to detect first X on event 3 (Press)
+	uint16_t minX = 0;
+	uint16_t minY = 0;
+	
 	bool _dragMode = false;
 	const uint8_t maxDeviation = 5;
-	const uint8_t tapCoordDiff = 1;
+	
 	bool pressUnlock = true;
 
 	TEvent lastEvent = TEvent::None;
