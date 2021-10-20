@@ -90,23 +90,22 @@ void IRAM_ATTR L58Touch::isr(void* arg)
  * A suboptimal attempt to detect Gestures by software
 */
 bool L58Touch::processGesture(TPoint point, unsigned long timeDiff) {
-    // DoubleTap detection is buggy and think will be the best to remove it
     // Note: Times are still arbitriary and should be tuned later after good testing
-    // printf("mX:%d x:%d\n", minX, point.x);
-    /* if (timeDiff <= 300 && lastEvent == TEvent::Tap) {
-        fireEvent(point, TEvent::DoubleTap);
-        lastEvent = TEvent::DoubleTap;
-        return true;
-    } */
-    if (timeDiff <= 300 && minX > point.x) {
-        // An horizontal swing should also maintain Y position minimally changed (Check not added)
-        fireEvent(point, TEvent::SwingLeft);
-        lastEvent = TEvent::SwingLeft;
-        return true;
-    } else if (timeDiff <= 300 && minX < point.x) {
-        fireEvent(point, TEvent::SwingRight);
-        lastEvent = TEvent::SwingRight;
-        return true;
+    // Avoid repeated Swing events
+    if (_touchEndTime - _touchLastSwing <= 500) {
+        if (minX > point.x + 10) {
+            // An horizontal swing should also maintain Y position minimally changed (Check not added)
+            fireEvent(point, TEvent::SwingLeft);
+            lastEvent = TEvent::SwingLeft;
+            _touchLastSwing = esp_timer_get_time()/1000;
+            return true;
+     
+        } else if (minX < point.x - 10) {
+            fireEvent(point, TEvent::SwingRight);
+            lastEvent = TEvent::SwingRight;
+            _touchLastSwing = esp_timer_get_time()/1000;
+            return true;
+        }
     }
     
     lastEvent = TEvent::None;
@@ -118,22 +117,26 @@ void L58Touch::processTouch()
 	/* Task move to Block state to wait for interrupt event */
 	if (xSemaphoreTake(TouchSemaphore, portMAX_DELAY) == false) return;
 	TPoint point = scanPoint();
-    unsigned long timeDiff = _touchEndTime - _touchStartTime;
-    
-    // A Tap should be done somehow in same spot, not dragging the coords  
-    if (timeDiff <= _tap_threshold && 
-       minX == point.x && minY == point.y) {     
-        fireEvent(point, TEvent::Tap);
-        lastEvent = TEvent::Tap;
-        _touchLastTapTime = esp_timer_get_time()/1000;
-        
+ 
+    // A Tap should be done somehow in same spot, not dragging the coords TODO: Add checks
+    if (_touchEndTime - _touchStartTime <= _tap_threshold &&
+        minX == point.x && minY == point.y) {
+        // DoubleTap detection is buggy and think will be the best to remove it
+        if (esp_timer_get_time()/1000 - _touchLastTapTime <= 400 && lastEvent == TEvent::Tap) {
+            fireEvent(point, TEvent::DoubleTap);
+            lastEvent = TEvent::DoubleTap;
+        } else {  
+            fireEvent(point, TEvent::Tap);
+            lastEvent = TEvent::Tap;
+             _touchLastTapTime = esp_timer_get_time()/1000;
+        }
+       
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
             printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
         #endif
-    } else if (processGesture(point, timeDiff)) {
+    } else if (processGesture(point, _touchEndTime - _touchStartTime)) {
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
             printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
-            //printf("timediff:%ld min %d\n", _touchEndTime - _touchStartTime, _tap_threshold);
         #endif
     }
 }
@@ -215,7 +218,6 @@ TPoint L58Touch::scanPoint()
         data[0].y = (uint16_t)((buffer[0 * 5 + 1] << 4) | ((buffer[0 * 5 + 3] >> 4) & 0x0F));
         data[0].x = (uint16_t)((buffer[0 * 5 + 2] << 4) | (buffer[0 * 5 + 3] & 0x0F));
         // _touchStartTime should read only the first event 3 after 0 and discard the rest
-                          // && pressUnlock  :  idea good but does not fire events
         if (data[0].event == 3 && pressUnlock) { /** Press */
             _touchStartTime = esp_timer_get_time()/1000;
             pressUnlock = false;

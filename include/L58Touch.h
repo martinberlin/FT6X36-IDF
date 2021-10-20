@@ -114,7 +114,7 @@ private:
 	unsigned long _touchStartTime = 0;
 	unsigned long _touchEndTime = 0;
 	unsigned long _touchLastTapTime = 0;
-
+	unsigned long _touchLastSwing = 0;
 	
 	// Used to detect first X on event 3 (Press)
 	uint16_t minX = 0;
