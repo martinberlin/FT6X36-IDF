@@ -31,10 +31,11 @@
 enum class TEvent
 {
 	None,
-	TouchStart,
-	TouchMove,
-	TouchEnd,
-	Tap
+	SwingLeft,  // 1
+	SwingRight, // 2
+	SwingUp,    // 3
+	Tap,        // 4
+	DoubleTap   // 5
 };
 
 struct TPoint
@@ -83,7 +84,6 @@ public:
     }
 	void(*_touchHandler)(TPoint point, TEvent e) = nullptr;
 	TouchData_t data[5];
-	bool tapDetectionEnabled = true;
 	
 private:
 	TPoint scanPoint();
@@ -98,8 +98,8 @@ private:
 	static L58Touch * _instance;
 	uint8_t _intPin;
 	// Milliseconds between press and release for Tap detection
-	uint8_t _tap_threshold = 150;
-
+	uint8_t _tap_threshold = 160;
+	
 	// Make touch rotation aware:
 	uint8_t _rotation = 0;
 	uint16_t _touch_width = 0;
@@ -111,11 +111,16 @@ private:
 	uint8_t _pointIdx = 0;
 	unsigned long _touchStartTime = 0;
 	unsigned long _touchEndTime = 0;
-    uint8_t lastEvent = 3; // No event
+	unsigned long _touchLastTapTime = 0;
 	uint16_t lastX = 0;
 	uint16_t lastY = 0;
 	bool _dragMode = false;
 	const uint8_t maxDeviation = 5;
+	const uint8_t tapCoordDiff = 1;
+	bool pressUnlock = true;
+
+	TEvent lastEvent = TEvent::None;
+	const char *enumEvents[6] = {"None", "SwingLeft", "SwingRight", "SwingUp", "Tap", "DoubleTap"};
 };
 
 #endif

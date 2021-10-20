@@ -92,12 +92,32 @@ void L58Touch::processTouch()
 	if (xSemaphoreTake(TouchSemaphore, portMAX_DELAY) == false) return;
 	TPoint point = scanPoint();
     
-    if (!tapDetectionEnabled) {
-        fireEvent(point, TEvent::Tap);
+    // A Tap should be done somehow in same spot, not dragging the coords
+    /* && (lastX >= point.x - tapCoordDiff || lastX <= point.x + tapCoordDiff) &&
+       (lastY >= point.y - tapCoordDiff || lastY <= point.y + tapCoordDiff)
+       */
+    
+    
+    if (_touchEndTime - _touchStartTime <= 160 && 
+       (lastX >= point.x - tapCoordDiff || lastX <= point.x + tapCoordDiff) &&
+       (lastY >= point.y - tapCoordDiff || lastY <= point.y + tapCoordDiff)) { 
+        // 400 millis seems an acceptable threshold
+        if (_touchEndTime - _touchLastTapTime <= 400 && lastEvent == TEvent::Tap) {
+            fireEvent(point, TEvent::DoubleTap);
+            lastEvent = TEvent::DoubleTap;
+        } else {
+            fireEvent(point, TEvent::Tap);
+            lastEvent = TEvent::Tap;
+            _touchLastTapTime = esp_timer_get_time()/1000;
+        }
+    
+        #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+            printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
+            //printf("timediff:%ld min %d\n", _touchEndTime - _touchStartTime, _tap_threshold);
+        #endif
     }
-    if (tapDetectionEnabled && _touchEndTime - _touchStartTime <= _tap_threshold) {
-        fireEvent(point, TEvent::Tap);
-    }
+
+    
 }
 
 uint8_t L58Touch::read8(uint8_t regName) {
@@ -176,11 +196,16 @@ TPoint L58Touch::scanPoint()
         data[0].event = (buffer[0] & 0x0F) >>1;
         data[0].y = (uint16_t)((buffer[0 * 5 + 1] << 4) | ((buffer[0 * 5 + 3] >> 4) & 0x0F));
         data[0].x = (uint16_t)((buffer[0 * 5 + 2] << 4) | (buffer[0 * 5 + 3] & 0x0F));
-        if (data[0].event == 3) { /** Press */
+        // _touchStartTime should read only the first event 3 after 0 and discard the rest
+                          // && pressUnlock  :  idea good but does not fire events
+        if (data[0].event == 3 && pressUnlock) { /** Press */
             _touchStartTime = esp_timer_get_time()/1000;
+            pressUnlock = false;
         }
         if (data[0].event == 0) { /** Lift up */
             _touchEndTime = esp_timer_get_time()/1000;
+            pressUnlock = true;
+            //printf("press/rel diff:%ld ms\n", _touchEndTime-_touchStartTime);
         }
 
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
