@@ -86,6 +86,10 @@ void IRAM_ATTR L58Touch::isr(void* arg)
     xSemaphoreGive(TouchSemaphore);
 }
 
+void L58Touch::setEnableGestures(bool enabled) {
+    enableGestures = enabled;
+}
+
 /*
  * A suboptimal attempt to detect Gestures by software
 */
@@ -119,8 +123,8 @@ void L58Touch::processTouch()
 	TPoint point = scanPoint();
  
     // A Tap should be done somehow in same spot, not dragging the coords TODO: Add checks
-    if (_touchEndTime - _touchStartTime <= _tap_threshold &&
-        minX == point.x && minY == point.y) {
+    // && minX == point.x && minY == point.y
+    if (_touchEndTime - _touchStartTime <= _tap_threshold && minX == point.x && minY == point.y) {
         // DoubleTap detection is buggy and think will be the best to remove it
         if (esp_timer_get_time()/1000 - _touchLastTapTime <= 400 && lastEvent == TEvent::Tap) {
             fireEvent(point, TEvent::DoubleTap);
@@ -131,13 +135,14 @@ void L58Touch::processTouch()
              _touchLastTapTime = esp_timer_get_time()/1000;
         }
        
+    } else {
+        if (enableGestures) {
+        if (processGesture(point, _touchEndTime - _touchStartTime)) {
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
             printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
         #endif
-    } else if (processGesture(point, _touchEndTime - _touchStartTime)) {
-        #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
-            printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
-        #endif
+        }
+        }
     }
 }
 

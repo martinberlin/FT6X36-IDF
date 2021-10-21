@@ -70,6 +70,7 @@ public:
 	void setTouchWidth(uint16_t width);
 	void setTouchHeight(uint16_t height);
 	void setTapThreshold(uint8_t millis);
+	void setEnableGestures(bool enabled);
 	// Pending implementation. How much x->touch y↓touch is placed (In case is smaller than display)
 	void setXoffset(uint16_t x_offset);
 	void setYoffset(uint16_t y_offset);
@@ -120,7 +121,7 @@ private:
 	uint16_t minX = 0;
 	uint16_t minY = 0;
 	
-	bool _dragMode = false;
+	bool enableGestures = false;
 	const uint8_t maxDeviation = 5;
 	
 	bool pressUnlock = true;
