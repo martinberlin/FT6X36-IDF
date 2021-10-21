@@ -69,7 +69,7 @@ public:
 	void setRotation(uint8_t rotation);
 	void setTouchWidth(uint16_t width);
 	void setTouchHeight(uint16_t height);
-	void setTapThreshold(uint8_t millis);
+	void setTapThreshold(uint64_t micros);
 	void setEnableGestures(bool enabled);
 	// Pending implementation. How much x->touch y↓touch is placed (In case is smaller than display)
 	void setXoffset(uint16_t x_offset);
@@ -99,9 +99,6 @@ private:
 
 	static L58Touch * _instance;
 	uint8_t _intPin;
-	// Milliseconds between press and release for Event detection
-	uint8_t _tap_threshold = 160;
-	uint8_t _swing_threshold = 200;
 	
 	// Make touch rotation aware:
 	uint8_t _rotation = 0;
@@ -112,10 +109,14 @@ private:
 	uint16_t _touchX[2], _touchY[2], _touchEvent[2];
 	TPoint _points[10];
 	uint8_t _pointIdx = 0;
-	unsigned long _touchStartTime = 0;
-	unsigned long _touchEndTime = 0;
-	unsigned long _touchLastTapTime = 0;
-	unsigned long _touchLastSwing = 0;
+	// Touch time measurements in micros
+	uint64_t _touchStartTime = 0;
+	uint64_t _touchEndTime = 0;
+	uint64_t _touchLastTapTime = 0;
+	uint64_t _touchLastSwing = 0;
+
+	// Milliseconds between press and release for Event detection
+	uint64_t _tap_threshold = 150000;
 	
 	// Used to detect first X on event 3 (Press)
 	uint16_t minX = 0;

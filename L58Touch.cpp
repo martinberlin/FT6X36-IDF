@@ -95,24 +95,31 @@ void L58Touch::setEnableGestures(bool enabled) {
 */
 bool L58Touch::processGesture(TPoint point, unsigned long timeDiff) {
     // Note: Times are still arbitriary and should be tuned later after good testing
-    // Avoid repeated Swing events
-    if (_touchEndTime - _touchLastSwing <= 500) {
-        if (minX > point.x + 10) {
-            // An horizontal swing should also maintain Y position minimally changed (Check not added)
-            fireEvent(point, TEvent::SwingLeft);
-            lastEvent = TEvent::SwingLeft;
-            _touchLastSwing = esp_timer_get_time()/1000;
-            return true;
-     
-        } else if (minX < point.x - 10) {
-            fireEvent(point, TEvent::SwingRight);
-            lastEvent = TEvent::SwingRight;
-            _touchLastSwing = esp_timer_get_time()/1000;
-            return true;
-        }
-    }
+    // Avoid repeated Swing events _touchEndTime - _touchLastSwing > X
+    uint64_t d = abs((int)_touchEndTime - (int)_touchLastSwing);
+
+    if (minX > point.x + 10 && d > 400000) {
+        // An horizontal swing should also maintain Y position minimally changed (Check not added)
+        fireEvent(point, TEvent::SwingLeft);
+        lastEvent = TEvent::SwingLeft;
+        
+        #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+            printf("fireEvent: SwingLeft %lld\n", d);
+        #endif
+        _touchLastSwing = esp_timer_get_time();
+        return true;
     
-    lastEvent = TEvent::None;
+    } else if (minX < point.x - 10 && d > 400000) {
+        fireEvent(point, TEvent::SwingRight);
+        lastEvent = TEvent::SwingRight;
+        
+        #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+            printf("fireEvent: SwingRight\n");
+        #endif
+        _touchLastSwing = esp_timer_get_time();
+        return true;
+    }
+
     return false;
 }
 
@@ -122,27 +129,22 @@ void L58Touch::processTouch()
 	if (xSemaphoreTake(TouchSemaphore, portMAX_DELAY) == false) return;
 	TPoint point = scanPoint();
  
-    // A Tap should be done somehow in same spot, not dragging the coords TODO: Add checks
-    // && minX == point.x && minY == point.y
-    if (_touchEndTime - _touchStartTime <= _tap_threshold && minX == point.x && minY == point.y) {
+    // A Tap should be done somehow in same spot, not dragging the coords
+    if (_touchEndTime - _touchStartTime < _tap_threshold && minX == point.x && minY == point.y) {
         // DoubleTap detection is buggy and think will be the best to remove it
-        if (esp_timer_get_time()/1000 - _touchLastTapTime <= 400 && lastEvent == TEvent::Tap) {
+        if (_touchEndTime - _touchLastTapTime < 200000 && lastEvent == TEvent::Tap) {
             fireEvent(point, TEvent::DoubleTap);
             lastEvent = TEvent::DoubleTap;
         } else {  
             fireEvent(point, TEvent::Tap);
             lastEvent = TEvent::Tap;
-             _touchLastTapTime = esp_timer_get_time()/1000;
+             _touchLastTapTime = esp_timer_get_time();
         }
-       
-    } else {
-        if (enableGestures) {
-        if (processGesture(point, _touchEndTime - _touchStartTime)) {
-        #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+       #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
             printf("fireEvent: %s\n", enumEvents[(uint8_t)lastEvent]);
         #endif
-        }
-        }
+    } else if (enableGestures) {
+        processGesture(point, _touchEndTime - _touchStartTime);
     }
 }
 
@@ -224,11 +226,11 @@ TPoint L58Touch::scanPoint()
         data[0].x = (uint16_t)((buffer[0 * 5 + 2] << 4) | (buffer[0 * 5 + 3] & 0x0F));
         // _touchStartTime should read only the first event 3 after 0 and discard the rest
         if (data[0].event == 3 && pressUnlock) { /** Press */
-            _touchStartTime = esp_timer_get_time()/1000;
+            _touchStartTime = esp_timer_get_time();
             pressUnlock = false;
         }
         if (data[0].event == 0) { /** Lift up */
-            _touchEndTime = esp_timer_get_time()/1000;
+            _touchEndTime = esp_timer_get_time();
             pressUnlock = true;
             //printf("press/rel diff:%ld ms\n", _touchEndTime-_touchStartTime);
         }
@@ -372,8 +374,8 @@ void L58Touch::setTouchHeight(uint16_t height) {
 	_touch_height = height;
 }
 
-void L58Touch::setTapThreshold(uint8_t millis) {
-    _tap_threshold = millis;
+void L58Touch::setTapThreshold(uint64_t micros) {
+    _tap_threshold = micros;
 }
 
 uint8_t L58Touch::getTapThreshold() {
