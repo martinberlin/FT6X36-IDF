@@ -96,20 +96,21 @@ void L58Touch::setEnableGestures(bool enabled) {
 bool L58Touch::processGesture(TPoint point, unsigned long timeDiff) {
     // Note: Times are still arbitriary and should be tuned later after good testing
     // Avoid repeated Swing events _touchEndTime - _touchLastSwing > X
-    uint64_t d = abs((int)_touchEndTime - (int)_touchLastSwing);
-
-    if (minX > point.x + 10 && d > 400000) {
+    uint64_t d = {_touchEndTime - _touchLastSwing};
+  
+    // This is not working correctly even with neg. numbers is > X (cast this)
+    if (minX > point.x + 10 && static_cast<long long>(d)>400000) {
         // An horizontal swing should also maintain Y position minimally changed (Check not added)
         fireEvent(point, TEvent::SwingLeft);
         lastEvent = TEvent::SwingLeft;
         
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
-            printf("fireEvent: SwingLeft %lld\n", d);
+            printf("fireEvent: SwingLeft %lld\n", static_cast<long long>(d));
         #endif
         _touchLastSwing = esp_timer_get_time();
         return true;
     
-    } else if (minX < point.x - 10 && d > 400000) {
+    } else if (minX < point.x - 10 && static_cast<long long>(d)>400000) {
         fireEvent(point, TEvent::SwingRight);
         lastEvent = TEvent::SwingRight;
         
@@ -130,9 +131,9 @@ void L58Touch::processTouch()
 	TPoint point = scanPoint();
  
     // A Tap should be done somehow in same spot, not dragging the coords
-    if (_touchEndTime - _touchStartTime < _tap_threshold && minX == point.x && minY == point.y) {
+    if (_touchEndTime - _touchStartTime < _tap_threshold) {
         // DoubleTap detection is buggy and think will be the best to remove it
-        if (_touchEndTime - _touchLastTapTime < 200000 && lastEvent == TEvent::Tap) {
+        if (_touchEndTime - _touchLastTapTime < 300000 && lastEvent == TEvent::Tap) {
             fireEvent(point, TEvent::DoubleTap);
             lastEvent = TEvent::DoubleTap;
         } else {  
