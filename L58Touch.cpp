@@ -155,17 +155,13 @@ TPoint L58Touch::scanPoint()
             }
             data[i].id =  (buffer[i * 5 + offset] >> 4) & 0x0F;
             data[i].event = buffer[i * 5 + offset] & 0x0F;
-            // Todo: Pending to revise why this construction is here
-            /* if (data[i].state == 0x06) {
-                data[i].state = 0x07;
-            } else {
-                data[i].state = 0x06;
-            } */
             data[i].y = (uint16_t)((buffer[i * 5 + 1 + offset] << 4) | ((buffer[i * 5 + 3 + offset] >> 4) & 0x0F));
             data[i].x = (uint16_t)((buffer[i * 5 + 2 + offset] << 4) | (buffer[i * 5 + 3 + offset] & 0x0F));
 
             #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
               printf("X[%d]:%d Y:%d E:%d\n", i, data[i].x, data[i].y, data[i].event);
+              #else
+              vTaskDelay(1);
             #endif
         }
 
@@ -185,6 +181,8 @@ TPoint L58Touch::scanPoint()
 
         #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
           printf("X:%d Y:%d E:%d\n", data[0].x, data[0].y, data[0].event);
+        #else
+          vTaskDelay(1);
         #endif
 	}
      
