@@ -4,6 +4,8 @@ This is an ESP-IDF component forked from ESP32 Arduino library [FT6X36](https://
 ## ATTENTION!
 Only basic functionality is currently implemented. Has been tested only on ESP32 using a 2.7" e-ink display (GDEW027W3-T).
 This will work only as a compoment in the ESP-IDF framework. If you are looking for an arduino-esp32 version check the [original FT6X36 library](https://github.com/strange-v/FT6X36)
+This was tested and works correctly with ESP-IDF v. 4.2 on 4.4 there is still some I2C configuration bug that needs to be addressed. It could not instantiate correctly I2C in 4.4 giving a strange error that SDA & SDL pins are the same (They are not). Updating the idf branch to **release/v4.2** it worked again as expected.
+
 
 ## Annotation
 The [Adafruit_FT6206_Library](https://github.com/adafruit/Adafruit_FT6206_Library) was used as a base for the FT6X36 library. Many things were added/improved/rewritten based on a datasheet for the controller.
