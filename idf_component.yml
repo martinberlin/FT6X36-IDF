@@ -1,3 +1,3 @@
-version: "1.3"
+version: "1.3.0"
 description: FT6X36-IDF is a library for self-capacitive touch panel controllers produced by FocalTech Systems (FT6236/FT6336) and the L58 touch
 url: https://github.com/martinberlin/FT6X36-IDF

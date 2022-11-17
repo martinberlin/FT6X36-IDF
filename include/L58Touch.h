@@ -5,16 +5,17 @@
 // https://github.com/martinberlin/cale-idf/wiki/Model-parallel-ED047TC1.h
 #include <stdint.h>
 #include <cstdlib>
+#include <utility> // std::pair
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include <stdio.h>
-#include <functional>
 #include "esp_log.h"
 #include "driver/i2c.h"
 #include "sdkconfig.h"
 #include "esp_idf_version.h"
+#include <esp_timer.h>
 #ifndef touch_ttgo_h
 #define touch_ttgo_h
 // I2C Constants
@@ -45,8 +46,6 @@ struct TPoint
 	uint8_t event;
 };
 
-typedef std::function<void(TPoint point, TEvent e)> L58TouchHandlerCallback;
-
 class L58Touch
 {
 	static void IRAM_ATTR isr(void* arg);
@@ -62,7 +61,8 @@ public:
 	L58Touch(int8_t intPin);
 	~L58Touch();
 	bool begin(uint16_t width = 0, uint16_t height = 0);
-	void registerTouchHandler(L58TouchHandlerCallback touch_handler);
+	void registerTouchHandler(void(*fn)(TPoint point, TEvent e));
+	void registerMultiTouchHandler(void (*fn)(TPoint point1, TPoint point2, TEvent e));
 	uint8_t touched();
 	void loop();
 	void processTouch();
@@ -70,11 +70,9 @@ public:
 	void setRotation(uint8_t rotation);
 	void setTouchWidth(uint16_t width);
 	void setTouchHeight(uint16_t height);
-	void setTapThreshold(uint8_t millis);
 	// Pending implementation. How much x->touch y↓touch is placed (In case is smaller than display)
 	void setXoffset(uint16_t x_offset);
 	void setYoffset(uint16_t y_offset);
-	uint8_t getTapThreshold();
 	void sleep();
 	// Smart template from EPD to swap x,y:
     template <typename T> static inline void
@@ -84,25 +82,34 @@ public:
       a = b;
       b = t;
     }
-	L58TouchHandlerCallback _touchHandler = nullptr;
+
+	void(*_touchHandler)(TPoint point, TEvent e) = nullptr;
+	void(*_multiTouchHandler)(TPoint point1, TPoint point2, TEvent e) = nullptr;
+
 	TouchData_t data[5];
+	// Tap detection is enabled by default
 	bool tapDetectionEnabled = true;
+	// Only if the time difference between press and release is minor than this milliseconds a Tap even is triggered
+	uint16_t tapDetectionMillisDiff = 100;
 	
 private:
 	TPoint scanPoint();
+	std::pair<TPoint, TPoint> scanMultiPoint();
+
 	void writeRegister8(uint8_t reg, uint8_t val);
 	void writeData(uint8_t *data, int len);
 	void readBytes(uint8_t *data, int len);
 	uint8_t readRegister8(uint8_t reg, uint8_t *data_buf);
+
 	void fireEvent(TPoint point, TEvent e);
+	void fireMultiTouch(TPoint point1, TPoint point2, TEvent e);
+
 	uint8_t read8(uint8_t regName);
 	void clearFlags();
 
 	static L58Touch * _instance;
 	uint8_t _intPin;
-	// Milliseconds between press and release for Tap detection
-	uint8_t _tap_threshold = 150;
-
+	
 	// Make touch rotation aware:
 	uint8_t _rotation = 0;
 	uint16_t _touch_width = 0;

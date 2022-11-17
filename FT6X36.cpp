@@ -1,7 +1,7 @@
 #include "FT6X36.h"
 
 FT6X36 *FT6X36::_instance = nullptr;
-static const char *touchTag = "i2c-touch";
+static const char *TAG = "i2c-touch";
 
 //Handle indicating I2C is ready to read the touch
 SemaphoreHandle_t TouchSemaphore = xSemaphoreCreateBinary();
@@ -13,10 +13,13 @@ FT6X36::FT6X36(int8_t intPin)
 	i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = (gpio_num_t)CONFIG_TOUCH_SDA;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    //conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.scl_io_num = (gpio_num_t)CONFIG_TOUCH_SDL;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    //conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = CONFIG_I2C_MASTER_FREQUENCY;
+	// you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here
+	conf.clk_flags = 0;
+
     i2c_param_config(I2C_NUM_0, &conf);
     esp_err_t i2c_driver = i2c_driver_install(I2C_NUM_0, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 	if (i2c_driver == ESP_OK) {
@@ -38,25 +41,25 @@ bool FT6X36::begin(uint8_t threshold, uint16_t width, uint16_t height)
 	_touch_width = width;
 	_touch_height = height;
 	if (width == 0 || height ==0) {
-		ESP_LOGE(touchTag,"begin(uint8_t threshold, uint16_t width, uint16_t height) did not receive the width / height so touch cannot be rotation aware");
+		ESP_LOGE(TAG,"begin(uint8_t threshold, uint16_t width, uint16_t height) did not receive the width / height so touch cannot be rotation aware");
 	}
 
 	uint8_t data_panel_id;
 	readRegister8(FT6X36_REG_PANEL_ID, &data_panel_id);
 
 	if (data_panel_id != FT6X36_VENDID) {
-		ESP_LOGE(touchTag,"FT6X36_VENDID does not match. Received:0x%x Expected:0x%x\n",data_panel_id,FT6X36_VENDID);
+		ESP_LOGE(TAG,"FT6X36_VENDID does not match. Received:0x%x Expected:0x%x\n",data_panel_id,FT6X36_VENDID);
 		return false;
 		}
-		ESP_LOGI(touchTag, "\tDevice ID: 0x%02x", data_panel_id);
+		ESP_LOGI(TAG, "\tDevice ID: 0x%02x", data_panel_id);
 
 	uint8_t chip_id;
 	readRegister8(FT6X36_REG_CHIPID, &chip_id);
 	if (chip_id != FT6206_CHIPID && chip_id != FT6236_CHIPID && chip_id != FT6336_CHIPID) {
-		ESP_LOGE(touchTag,"FT6206_CHIPID does not match. Received:0x%x\n",chip_id);
+		ESP_LOGE(TAG,"FT6206_CHIPID does not match. Received:0x%x\n",chip_id);
 		return false;
 	}
-	ESP_LOGI(touchTag, "\tFound touch controller with Chip ID: 0x%02x", chip_id);
+	ESP_LOGI(TAG, "\tFound touch controller with Chip ID: 0x%02x", chip_id);
 	
     // INT pin triggers the callback function on the Falling edge of the GPIO
     gpio_config_t io_conf;
@@ -77,9 +80,9 @@ bool FT6X36::begin(uint8_t threshold, uint16_t width, uint16_t height)
 	return true;
 }
 
-void FT6X36::registerTouchHandler(FT6X36TouchHandlerCallback touch_handler)
+void FT6X36::registerTouchHandler(void (*fn)(TPoint point, TEvent e))
 {
-	_touchHandler = touch_handler;
+	_touchHandler = fn;
 	if (CONFIG_FT6X36_DEBUG) printf("Touch handler function registered\n");
 }
 
@@ -88,7 +91,7 @@ uint8_t FT6X36::touched()
 	uint8_t data_buf;
     esp_err_t ret = readRegister8(FT6X36_REG_NUM_TOUCHES, &data_buf);
 	if (ret != ESP_OK) {
-		ESP_LOGE(touchTag, "Error reading from device: %s", esp_err_to_name(ret));
+		ESP_LOGE(TAG, "Error reading from device: %s", esp_err_to_name(ret));
 	 }
 
 	if (data_buf > 2)
@@ -138,13 +141,13 @@ void FT6X36::processTouch()
 				     esp_timer_get_time()/1000 - _touchStartTime > 300) {
 					_dragMode = true;
 					fireEvent(point, TEvent::DragStart);
-					#if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+					#if defined(CONFIG_FT6X36_DEBUG_EVENTS) && CONFIG_FT6X36_DEBUG_EVENTS==1
 						printf("EV: DragStart\n");
 					#endif
 					
 				} else if (_dragMode) {
 					fireEvent(point, TEvent::DragMove);
-					#if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+					#if defined(CONFIG_FT6X36_DEBUG_EVENTS) && CONFIG_FT6X36_DEBUG_EVENTS==1
 						printf("EV: DragMove\n");
 					#endif
 				}
@@ -164,7 +167,7 @@ void FT6X36::processTouch()
 			fireEvent(point, TEvent::TouchEnd);
 			if (_dragMode) {
 				fireEvent(point, TEvent::DragEnd);
-				#if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+				#if defined(CONFIG_FT6X36_DEBUG_EVENTS) && CONFIG_FT6X36_DEBUG_EVENTS==1
 					printf("EV: DragEnd\n");
 				#endif
 				_dragMode = false;
@@ -176,7 +179,7 @@ void FT6X36::processTouch()
 				_points[0] = {0, 0};
 				_touchStartTime = 0;
 
-				#if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+				#if defined(CONFIG_FT6X36_DEBUG_EVENTS) && CONFIG_FT6X36_DEBUG_EVENTS==1
 					printf("EV: Tap\n");
 				#endif
 				_dragMode = false;
@@ -185,7 +188,7 @@ void FT6X36::processTouch()
 			break;
 
 			case TRawEvent::NoEvent:
-			  #if defined(CONFIG_FT6X36_DEBUG) && CONFIG_FT6X36_DEBUG==1
+			  #if defined(CONFIG_FT6X36_DEBUG_EVENTS) && CONFIG_FT6X36_DEBUG_EVENTS==1
 					printf("EV: NoEvent\n");
 		      #endif
 			break;
@@ -278,8 +281,9 @@ bool FT6X36::readData(void)
 		break;
   }
 
+	printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
 	if (CONFIG_FT6X36_DEBUG) {
-	  printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
+	  //printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
 	  //printf("X1:%d Y1:%d EVENT:%d\n", _touchX[1], _touchY[1], _touchEvent[1]);
 	}
 	return true;
