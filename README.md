@@ -8,7 +8,7 @@ This was tested and works correctly with ESP-IDF v. 4.2 on 4.4 there is still so
 
 Here I present you the definitive guide to Good-Display I2C touch pin up which usually is a 6 pin FPC cable. I'm saving you the time to search and open 3 different PDF datasheets!
 
-2.7" & 4.2" FT6336
+2.7" FT6336
 
 ```
 1 GND
@@ -29,6 +29,8 @@ Here I present you the definitive guide to Good-Display I2C touch pin up which u
 5 SCL
 6 SDA
 ```
+
+4.2" 400*300 still needs confirmation
 
 ## Annotation
 The [Adafruit_FT6206_Library](https://github.com/adafruit/Adafruit_FT6206_Library) was used as a base for the FT6X36 library. Many things were added/improved/rewritten based on a datasheet for the controller.
