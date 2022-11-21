@@ -19,6 +19,17 @@ Here I present you the definitive guide to Good-Display I2C touch pin up which u
 6 SDA
 ```
 
+4.2" FT6336 400x300
+
+```
+1 GND
+2 VDD
+3 RST (Not used in this component)
+4 INT
+5 SDA
+6 SCL
+```
+
 1.54" FT5436
 
 ```
@@ -29,8 +40,6 @@ Here I present you the definitive guide to Good-Display I2C touch pin up which u
 5 SCL
 6 SDA
 ```
-
-4.2" 400*300 still needs confirmation
 
 ## Annotation
 The [Adafruit_FT6206_Library](https://github.com/adafruit/Adafruit_FT6206_Library) was used as a base for the FT6X36 library. Many things were added/improved/rewritten based on a datasheet for the controller.
