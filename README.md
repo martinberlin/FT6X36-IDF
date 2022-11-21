@@ -2,9 +2,9 @@
 This is an ESP-IDF component forked from ESP32 Arduino library [FT6X36](https://github.com/strange-v/FT6X36) for self-capacitive touch panel controllers produced by FocalTech Systems.
 
 ## ATTENTION!
-Only basic functionality is currently implemented. Has been tested only on ESP32 using a 2.7" e-ink display (GDEW027W3-T).
+Only basic functionality is currently implemented. Has been tested only on ESP32 using a 2.7" e-ink display (GDEW027W3-T and new model GDEY027T91).
 This will work only as a compoment in the ESP-IDF framework. If you are looking for an arduino-esp32 version check the [original FT6X36 library](https://github.com/strange-v/FT6X36)
-This was tested and works correctly with ESP-IDF v. 4.2 on 4.4 there is still some I2C configuration bug that needs to be addressed. It could not instantiate correctly I2C in 4.4 giving a strange error that SDA & SDL pins are the same (They are not). Updating the idf branch to **release/v4.2** it worked again as expected.
+This was tested and works correctly with ESP-IDF v. 4.2 on 4.4 and latest version 5.
 
 Here I present you the definitive guide to Good-Display I2C touch pin up which usually is a 6 pin FPC cable. I'm saving you the time to search and open 3 different PDF datasheets!
 
