@@ -8,17 +8,17 @@ SemaphoreHandle_t TouchSemaphore = xSemaphoreCreateBinary();
 
 FT6X36::FT6X36(int8_t intPin)
 {
-	_instance = this;
+    _instance = this;
 
-	i2c_config_t conf;
+    i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = (gpio_num_t)CONFIG_TOUCH_SDA;
     //conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.scl_io_num = (gpio_num_t)CONFIG_TOUCH_SDL;
     //conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = CONFIG_I2C_MASTER_FREQUENCY;
-	// you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here
-	conf.clk_flags = 0;
+    // you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here
+    conf.clk_flags = 0;
 
     i2c_param_config(I2C_NUM_0, &conf);
     esp_err_t i2c_driver = i2c_driver_install(I2C_NUM_0, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
@@ -208,12 +208,11 @@ uint8_t FT6X36::read8(uint8_t regName) {
 
 bool FT6X36::readData(void)
 {
-	esp_err_t ret;
-	uint8_t data_size = 16;     // Discarding last 2: 0x0E & 0x0F as not relevant
-	uint8_t data[data_size];
+    esp_err_t ret;
+    uint8_t data_size = 16;     // Discarding last 2: 0x0E & 0x0F as not relevant
+    uint8_t data[data_size];
     uint8_t touch_pnt_cnt;      // Number of detected touch points
     readRegister8(FT6X36_REG_NUM_TOUCHES, &touch_pnt_cnt);
-	//printf("NUM_TOUCHES:%d\n",touch_pnt_cnt);
 
     // Read data
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -280,10 +279,8 @@ bool FT6X36::readData(void)
 		_touchX[1] = _touch_height - _touchX[1] - 1;
 		break;
   }
-
-	printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
 	if (CONFIG_FT6X36_DEBUG) {
-	  //printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
+	  printf("X0:%d Y0:%d EVENT:%d\n", _touchX[0], _touchY[0], _touchEvent[0]);
 	  //printf("X1:%d Y1:%d EVENT:%d\n", _touchX[1], _touchY[1], _touchEvent[1]);
 	}
 	return true;
