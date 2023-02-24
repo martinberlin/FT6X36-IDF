@@ -79,3 +79,9 @@ If you like this component and it made your life easier please consider becoming
 0x68cEAB84F33776a7Fac977B2Bdc0D50933344086
 
 We are thankful for the support and contributions so far!
+
+## Interesting projects using this library
+
+- [Bistable-smart-switch](https://github.com/martinberlin/bistable-smart-switch) an ESP32-C3 (or S3) smart switch for your wall
+
+Send us yours to be featured here. The project needs to be open source in any public repository.
