@@ -34,12 +34,14 @@ Here I present you the definitive guide to Good-Display I2C touch pin up which u
 
 ```
 1 GND
-2 VDD
+2 INT
 3 RST (Not used in this component)
-4 INT
+4 VDD
 5 SCL
 6 SDA
 ```
+
+Check Good-Display [touch drawing for 1.54"](https://www.good-display.com/product/1.54-inch-touch-screen,-for-1.54-inch-e-paper-display-258.html) to be sure. 
 
 ## Annotation
 The [Adafruit_FT6206_Library](https://github.com/adafruit/Adafruit_FT6206_Library) was used as a base for the FT6X36 library. Many things were added/improved/rewritten based on a datasheet for the controller.
