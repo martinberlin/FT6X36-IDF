@@ -33,7 +33,8 @@ FT6X36::FT6X36(int8_t intPin)
 // Destructor should detach interrupt to the pin
 FT6X36::~FT6X36()
 {
-	gpio_isr_handler_remove((gpio_num_t)CONFIG_TOUCH_INT);
+	if (_intPin >= 0)
+		gpio_isr_handler_remove((gpio_num_t)_intPin);
 }
 
 bool FT6X36::begin(uint8_t threshold, uint16_t width, uint16_t height)
@@ -60,19 +61,22 @@ bool FT6X36::begin(uint8_t threshold, uint16_t width, uint16_t height)
 		return false;
 	}
 	ESP_LOGI(TAG, "\tFound touch controller with Chip ID: 0x%02x", chip_id);
-	
-    // INT pin triggers the callback function on the Falling edge of the GPIO
-    gpio_config_t io_conf;
-    io_conf.intr_type = GPIO_INTR_NEGEDGE; // GPIO_INTR_NEGEDGE repeats always interrupt
-    io_conf.pin_bit_mask = 1ULL<<CONFIG_TOUCH_INT;  
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_down_en = (gpio_pulldown_t) 0; // disable pull-down mode
-    io_conf.pull_up_en   = (gpio_pullup_t) 1;   // pull-up mode
-    gpio_config(&io_conf);
 
-	esp_err_t isr_service = gpio_install_isr_service(0);
-    printf("ISR trigger install response: 0x%x %s\n", isr_service, (isr_service==0)?"ESP_OK":"");
-    gpio_isr_handler_add((gpio_num_t)CONFIG_TOUCH_INT, isr, (void*) 1);
+	if (_intPin >= 0)
+	{
+        // INT pin triggers the callback function on the Falling edge of the GPIO
+        gpio_config_t io_conf;
+        io_conf.intr_type = GPIO_INTR_NEGEDGE; // GPIO_INTR_NEGEDGE repeats always interrupt
+        io_conf.pin_bit_mask = 1ULL<<_intPin;  
+        io_conf.mode = GPIO_MODE_INPUT;
+        io_conf.pull_down_en = (gpio_pulldown_t) 0; // disable pull-down mode
+        io_conf.pull_up_en   = (gpio_pullup_t) 1;   // pull-up mode
+        gpio_config(&io_conf);
+
+        esp_err_t isr_service = gpio_install_isr_service(0);
+        printf("ISR trigger install response: 0x%x %s\n", isr_service, (isr_service==0)?"ESP_OK":"");
+        gpio_isr_handler_add((gpio_num_t)_intPin, isr, (void*) 1);
+	}
 
 	writeRegister8(FT6X36_REG_DEVICE_MODE, 0x00);
 	writeRegister8(FT6X36_REG_THRESHHOLD, threshold);
@@ -117,7 +121,11 @@ void IRAM_ATTR FT6X36::isr(void* arg)
 void FT6X36::processTouch()
 {
 	/* Task move to Block state to wait for interrupt event */
-	if (xSemaphoreTake(TouchSemaphore, portMAX_DELAY) == false) return;
+    if (_intPin >= 0)
+    {
+    	if (xSemaphoreTake(TouchSemaphore, portMAX_DELAY) == false) return;
+    }
+
 	readData();
 	uint8_t n = 0;
 	TRawEvent event = (TRawEvent)_touchEvent[n];
@@ -199,6 +207,34 @@ void FT6X36::processTouch()
 	lastY = _touchY[0];
 }
 
+void FT6X36::poll(TPoint * point, TEvent * e)
+{
+	readData();
+	// TPoint point{_touchX[0], _touchY[0]};
+	TRawEvent event = (TRawEvent)_touchEvent[0];
+
+	if (point != NULL)
+	{
+		point->x = _touchX[0];
+		point->y = _touchY[0];
+	}
+	if (e != NULL)
+	{
+		switch (event)
+		{
+			case TRawEvent::PressDown:
+				*e = TEvent::TouchStart;
+				break;
+			case TRawEvent::Contact:
+				*e = TEvent::TouchMove;
+				break;
+			case TRawEvent::LiftUp:
+			default:
+				*e = TEvent::TouchEnd;
+				break;
+		}
+	}
+}
 
 uint8_t FT6X36::read8(uint8_t regName) {
 	uint8_t buf;

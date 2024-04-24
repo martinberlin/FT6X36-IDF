@@ -134,6 +134,7 @@ public:
 	void loop();
 	void processTouch();
 	void debugInfo();
+	void poll(TPoint * point, TEvent * event);
 	// Helper functions to make the touch display aware
 	void setRotation(uint8_t rotation);
 	void setTouchWidth(uint16_t width);
@@ -159,7 +160,7 @@ private:
 	uint8_t read8(uint8_t regName);
 	static FT6X36 * _instance;
 	
-	uint8_t _intPin;
+	int8_t _intPin;
 	
 	// Make touch rotation aware:
 	uint8_t _rotation = 0;
