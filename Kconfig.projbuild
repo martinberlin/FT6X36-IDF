@@ -2,11 +2,11 @@ menu "Touch FT6X36 Configuration"
     comment "The touch chip needs an I2C port and one input GPIO"
     config TOUCH_SDA
         int "I2C data SDA"
-        range 0 35
+        range 0 38
         default 21
     config TOUCH_SDL
         int "I2C clock SDL"
-        range 0 37
+        range 0 39
         default 22
     config TOUCH_INT
         int "Touch interrupt: On LOW reads the data via I2C (Input pullup)"
